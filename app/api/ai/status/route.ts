@@ -1,33 +1,49 @@
 import { NextResponse } from "next/server"
+import { validateEnv, getPaystackConfig } from "@/lib/env-config"
 
 export async function GET() {
   try {
+    const envStatus = validateEnv()
+    const paystackConfig = getPaystackConfig()
+
     // Check if APIs are configured and working
-    const neuralStatus = await checkNeuralCommerceStatus()
+    const neuralStatus = await checkNeuralCommerceStatus(paystackConfig)
     const affiliateStatus = await checkAffiliateStatus()
-    const quantumStatus = await checkQuantumCoreStatus()
+    const quantumStatus = await checkQuantumCoreStatus(paystackConfig)
 
     return NextResponse.json({
       neural: neuralStatus,
       affiliate: affiliateStatus,
       quantum: quantumStatus,
+      mode: envStatus.mode,
+      timestamp: new Date().toISOString(),
     })
   } catch (error) {
     console.error("AI Status API error:", error)
-    return NextResponse.json({ error: "Failed to fetch AI status" }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: "Failed to fetch AI status",
+        neural: "error",
+        affiliate: "error",
+        quantum: "error",
+        timestamp: new Date().toISOString(),
+      },
+      { status: 500 },
+    )
   }
 }
 
-async function checkNeuralCommerceStatus(): Promise<string> {
+async function checkNeuralCommerceStatus(paystackConfig: any): Promise<string> {
   // Check if Paystack integration is working
-  if (!process.env.PAYSTACK_SECRET_KEY) {
+  if (!paystackConfig.isConfigured) {
     return "offline"
   }
 
   try {
     const response = await fetch("https://api.paystack.co/transaction?perPage=1", {
       headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        Authorization: `Bearer ${paystackConfig.secretKey}`,
+        "Content-Type": "application/json",
       },
     })
 
@@ -47,13 +63,17 @@ async function checkAffiliateStatus(): Promise<string> {
   return "learning"
 }
 
-async function checkQuantumCoreStatus(): Promise<string> {
+async function checkQuantumCoreStatus(paystackConfig: any): Promise<string> {
   // Check if all core systems are operational
-  const hasPaystack = !!process.env.PAYSTACK_SECRET_KEY
+  const hasPaystack = paystackConfig.isConfigured
   const hasAffiliate = !!process.env.AFFILIATE_API_KEY
 
-  if (hasPaystack || hasAffiliate) {
+  if (hasPaystack) {
     return "active"
+  }
+
+  if (hasAffiliate) {
+    return "learning"
   }
 
   return "offline"
