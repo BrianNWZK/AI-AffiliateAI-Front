@@ -1,50 +1,57 @@
 import { NextResponse } from "next/server"
-import { PaystackIntegration } from "@/lib/integrations/paystack"
-import { AffiliateIntegration } from "@/lib/integrations/affiliate"
-import { EcommerceIntegration } from "@/lib/integrations/ecommerce"
+import { PaystackIntegration } from "@/lib/paystack-config"
 
 export async function GET() {
   try {
     const paystack = new PaystackIntegration()
-    const affiliate = new AffiliateIntegration()
-    const ecommerce = new EcommerceIntegration()
 
-    // Fetch all revenue streams in parallel
-    const [paystackRevenue, affiliateRevenue, ecommerceRevenue, previousMonthRevenue] = await Promise.all([
-      paystack.getMonthlyRevenue().catch(() => 0),
-      affiliate.getTotalAffiliateRevenue().catch(() => 0),
-      ecommerce.getTotalEcommerceRevenue().catch(() => 0),
-      getPreviousMonthRevenue().catch(() => 1000),
+    // Get real Paystack data
+    const [currentMonthRevenue, totalRevenue, recentTransactions] = await Promise.all([
+      paystack.getMonthlyRevenue(),
+      paystack.getTotalRevenue(),
+      paystack.getRecentActivities(5),
     ])
 
-    const totalRevenue = paystackRevenue + affiliateRevenue + ecommerceRevenue
-    const growth = previousMonthRevenue > 0 ? ((totalRevenue - previousMonthRevenue) / previousMonthRevenue) * 100 : 0
+    // Get previous month for growth calculation
+    const lastMonth = new Date()
+    lastMonth.setMonth(lastMonth.getMonth() - 1)
+    const previousMonthRevenue = await paystack.getMonthlyRevenue(lastMonth.getMonth(), lastMonth.getFullYear())
 
-    return NextResponse.json({
+    // Calculate growth
+    const growth =
+      previousMonthRevenue > 0
+        ? ((currentMonthRevenue - previousMonthRevenue) / previousMonthRevenue) * 100
+        : currentMonthRevenue > 0
+          ? 100
+          : 0
+
+    const responseData = {
       total: Math.round(totalRevenue * 100) / 100,
-      neural: Math.round((paystackRevenue + ecommerceRevenue) * 100) / 100, // Neural Commerce
-      affiliate: Math.round(affiliateRevenue * 100) / 100,
+      neural: Math.round(currentMonthRevenue * 100) / 100,
+      affiliate: 0,
       growth: Math.round(growth * 100) / 100,
       breakdown: {
-        paystack: Math.round(paystackRevenue * 100) / 100,
-        ecommerce: Math.round(ecommerceRevenue * 100) / 100,
-        affiliate: Math.round(affiliateRevenue * 100) / 100,
+        paystack: Math.round(currentMonthRevenue * 100) / 100,
+        monthly: Math.round(currentMonthRevenue * 100) / 100,
+        total: Math.round(totalRevenue * 100) / 100,
       },
-    })
-  } catch (error) {
-    console.error("Comprehensive revenue API error:", error)
-    return NextResponse.json({ error: "Failed to fetch revenue data" }, { status: 500 })
-  }
-}
+      recentTransactions: recentTransactions.slice(0, 3),
+      lastUpdated: new Date().toISOString(),
+    }
 
-async function getPreviousMonthRevenue(): Promise<number> {
-  const lastMonth = new Date()
-  lastMonth.setMonth(lastMonth.getMonth() - 1)
-
-  try {
-    const paystack = new PaystackIntegration()
-    return await paystack.getMonthlyRevenue(lastMonth.getMonth(), lastMonth.getFullYear())
+    console.log("Real Paystack Revenue:", responseData)
+    return NextResponse.json(responseData)
   } catch (error) {
-    return 1000 // Fallback value
+    console.error("Revenue API error:", error)
+    return NextResponse.json(
+      {
+        error: "Failed to fetch revenue data",
+        total: 0,
+        neural: 0,
+        affiliate: 0,
+        growth: 0,
+      },
+      { status: 500 },
+    )
   }
 }
