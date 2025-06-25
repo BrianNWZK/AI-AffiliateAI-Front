@@ -1,5 +1,3 @@
-import { env } from "@/lib/env-config"
-
 interface PaystackTransaction {
   id: number
   amount: number
@@ -15,13 +13,6 @@ interface PaystackResponse {
   status: boolean
   message: string
   data: PaystackTransaction[]
-  meta?: {
-    total: number
-    skipped: number
-    perPage: number
-    page: number
-    pageCount: number
-  }
 }
 
 export class PaystackIntegration {
@@ -29,8 +20,8 @@ export class PaystackIntegration {
   private publicKey: string
 
   constructor() {
-    this.secretKey = env.paystack.secretKey
-    this.publicKey = env.paystack.publicKey
+    this.secretKey = process.env.PAYSTACK_SECRET_KEY || ""
+    this.publicKey = process.env.PAYSTACK_PUBLIC_KEY || ""
   }
 
   async getTransactions(perPage = 50): Promise<PaystackTransaction[]> {
@@ -53,12 +44,6 @@ export class PaystackIntegration {
       }
 
       const data: PaystackResponse = await response.json()
-
-      if (!data.status) {
-        console.error("Paystack API returned error:", data.message)
-        return []
-      }
-
       return data.data || []
     } catch (error) {
       console.error("Paystack API fetch error:", error)
@@ -84,7 +69,6 @@ export class PaystackIntegration {
       return total + transaction.amount / 100 // Paystack amounts are in kobo
     }, 0)
 
-    console.log(`Monthly revenue for ${targetMonth + 1}/${targetYear}: ₦${revenue.toLocaleString()}`)
     return revenue
   }
 
@@ -94,7 +78,6 @@ export class PaystackIntegration {
       .filter((t) => t.status === "success")
       .reduce((sum, transaction) => sum + transaction.amount / 100, 0)
 
-    console.log(`Total revenue: ₦${total.toLocaleString()}`)
     return total
   }
 
@@ -114,33 +97,9 @@ export class PaystackIntegration {
         amount: transaction.amount / 100,
       }))
   }
-
-  async verifyTransaction(reference: string): Promise<boolean> {
-    if (!this.secretKey) return false
-
-    try {
-      const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
-        headers: {
-          Authorization: `Bearer ${this.secretKey}`,
-        },
-      })
-
-      if (!response.ok) return false
-
-      const data = await response.json()
-      return data.status && data.data.status === "success"
-    } catch (error) {
-      console.error("Transaction verification error:", error)
-      return false
-    }
-  }
-
-  getPublicKey(): string {
-    return this.publicKey
-  }
 }
 
-// Keep any existing exports from your original file
+// Keep existing exports
 export const paystackConfig = {
   publicKey: process.env.PAYSTACK_PUBLIC_KEY || "",
   secretKey: process.env.PAYSTACK_SECRET_KEY || "",
