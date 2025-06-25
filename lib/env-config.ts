@@ -11,7 +11,7 @@ export const env = {
     apiKey: process.env.SENDGRID_API_KEY || "",
   },
 
-  // Paystack (note: using your exact variable names)
+  // Paystack (using your exact variable names)
   paystack: {
     publicKey: process.env.PAYSTACK_PUBLIC_KEY || "",
     secretKey: process.env.PAYSTACK_SECRET_KEY || "",
