@@ -1,0 +1,13 @@
+# Vercel ignore file
+.env*
+.git
+.gitignore
+README.md
+deploy-to-vercel.sh
+INTEGRATIONS.md
+node_modules
+.next
+.DS_Store
+*.log
+.vscode
+.idea

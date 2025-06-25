@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+  body {
+    @apply bg-gray-900 text-white;
+  }
+}
+
+@layer components {
+  .neural-card {
+    @apply bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg shadow-lg;
+  }
+
+  .quantum-button {
+    @apply bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg shadow-lg transition-all duration-200;
+  }
+
+  .revenue-metric {
+    @apply text-2xl font-bold text-green-400;
+  }
+
+  .ai-status {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .ai-status.active {
+    @apply bg-green-500/20 text-green-400;
+  }
+
+  .ai-status.learning {
+    @apply bg-yellow-500/20 text-yellow-400;
+  }
+}
