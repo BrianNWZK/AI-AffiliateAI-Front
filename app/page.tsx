@@ -5,10 +5,12 @@ import { RevenueMetrics } from "@/components/revenue-metrics"
 import { NeuralCommercePanel } from "@/components/neural-commerce-panel"
 import { AffiliateMarketingPanel } from "@/components/affiliate-marketing-panel"
 import { ActivityFeed } from "@/components/activity-feed"
+import { AIStatusIndicator } from "@/components/ai-status-indicator"
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [systemStatus, setSystemStatus] = useState(null)
+  const [aiStatus, setAIStatus] = useState(null)
   const [revenueData, setRevenueData] = useState({
     total: 0,
     neural: 0,
@@ -35,6 +37,24 @@ export default function Dashboard() {
             environment: { isValid: false, status: "demo" },
             services: { paystack: { configured: false, status: "not_configured" } },
             recommendations: ["Add PAYSTACK_SECRET_KEY and PAYSTACK_PUBLIC_KEY for real data"],
+          })
+        }
+
+        // Check AI status
+        try {
+          const aiResponse = await fetch("/api/ai/status")
+          if (aiResponse.ok) {
+            const aiData = await aiResponse.json()
+            console.log("🤖 AI Status:", aiData)
+            setAIStatus(aiData)
+          }
+        } catch (aiError) {
+          console.warn("⚠️ AI status check failed:", aiError)
+          setAIStatus({
+            neural: "offline",
+            affiliate: "offline",
+            quantum: "offline",
+            mode: "demo",
           })
         }
 
@@ -68,7 +88,7 @@ export default function Dashboard() {
         // Log final status
         if (health?.services?.paystack?.status === "connected") {
           console.log("✅ Paystack is connected and working")
-          console.log(`📊 Found ${health.services.paystack.test.transactionCount} transactions`)
+          console.log(`📊 Found ${health.services.paystack.test?.transactionCount || 0} transactions`)
         } else {
           console.log("🔧 Demo mode - Add Paystack keys for real data")
         }
@@ -92,6 +112,12 @@ export default function Dashboard() {
           neural: 45000,
           affiliate: 25000,
           growth: 12.5,
+        })
+        setAIStatus({
+          neural: "offline",
+          affiliate: "offline",
+          quantum: "offline",
+          mode: "demo",
         })
       } finally {
         setLoading(false)
@@ -150,13 +176,13 @@ export default function Dashboard() {
                 </div>
                 <div className="text-xs opacity-80 mt-1">
                   {systemStatus.services?.paystack?.configured
-                    ? `Paystack Connected: ${systemStatus.services.paystack.test.transactionCount} transactions found`
+                    ? `Paystack Connected: ${systemStatus.services.paystack.test?.transactionCount || 0} transactions found`
                     : "Paystack: Using demo data - Add PAYSTACK_SECRET_KEY for real transactions"}
                 </div>
               </div>
               <div className="text-xs">
-                <div>Environment: {systemStatus.environment?.nodeEnv}</div>
-                <div>Status: {systemStatus.services?.paystack?.status}</div>
+                <div>Environment: {systemStatus.environment?.nodeEnv || "development"}</div>
+                <div>Status: {systemStatus.services?.paystack?.status || "unknown"}</div>
               </div>
             </div>
 
@@ -177,6 +203,11 @@ export default function Dashboard() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* AI Status Indicator */}
+          <div className="lg:col-span-3">
+            <AIStatusIndicator status={aiStatus} />
+          </div>
+
           {/* Revenue Metrics */}
           <div className="lg:col-span-3">
             <RevenueMetrics data={revenueData} />
