@@ -1,64 +1,106 @@
 import { NextResponse } from "next/server"
+import { validateEnv, getPaystackConfig, getSupabaseConfig, getSendGridConfig } from "@/lib/env-config"
 
 export async function GET() {
   try {
-    const status = {
-      neural: await checkNeuralStatus(),
-      affiliate: await checkAffiliateStatus(),
-      quantum: await checkQuantumStatus(),
-      integrations: await checkIntegrations(),
+    const envStatus = validateEnv()
+    const paystackConfig = getPaystackConfig()
+    const supabaseConfig = getSupabaseConfig()
+    const sendgridConfig = getSendGridConfig()
+
+    // Test Paystack connection if configured
+    let paystackStatus = "offline"
+    let transactionCount = 0
+
+    if (paystackConfig.isConfigured) {
+      try {
+        const response = await fetch("https://api.paystack.co/transaction?perPage=1", {
+          headers: {
+            Authorization: `Bearer ${paystackConfig.secretKey}`,
+            "Content-Type": "application/json",
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          paystackStatus = "online"
+          transactionCount = data.meta?.total || 0
+        } else {
+          paystackStatus = "error"
+        }
+      } catch (error) {
+        console.warn("Paystack connection test failed:", error)
+        paystackStatus = "error"
+      }
     }
 
-    return NextResponse.json(status)
+    // Test Supabase connection if configured
+    let supabaseStatus = "offline"
+    if (supabaseConfig.isConfigured) {
+      try {
+        const response = await fetch(`${supabaseConfig.url}/rest/v1/`, {
+          headers: {
+            apikey: supabaseConfig.serviceRoleKey,
+            Authorization: `Bearer ${supabaseConfig.serviceRoleKey}`,
+          },
+        })
+        supabaseStatus = response.ok ? "online" : "error"
+      } catch (error) {
+        supabaseStatus = "error"
+      }
+    }
+
+    // SendGrid status (based on API key presence)
+    const sendgridStatus = sendgridConfig.isConfigured ? "configured" : "offline"
+
+    const systemStatus = {
+      overall: paystackStatus === "online" ? "operational" : envStatus.mode === "demo" ? "demo" : "degraded",
+      mode: envStatus.mode,
+      integrations: {
+        paystack: {
+          status: paystackStatus,
+          name: "Paystack Payment Gateway",
+          configured: paystackConfig.isConfigured,
+          transactionCount,
+          lastCheck: new Date().toISOString(),
+        },
+        supabase: {
+          status: supabaseStatus,
+          name: "Supabase Database",
+          configured: supabaseConfig.isConfigured,
+          lastCheck: new Date().toISOString(),
+        },
+        sendgrid: {
+          status: sendgridStatus,
+          name: "SendGrid Email Service",
+          configured: sendgridConfig.isConfigured,
+          lastCheck: new Date().toISOString(),
+        },
+      },
+      environment: {
+        valid: envStatus.isValid,
+        mode: envStatus.mode,
+        nodeEnv: process.env.NODE_ENV || "development",
+        timestamp: new Date().toISOString(),
+      },
+      ai_systems: {
+        neural_commerce: paystackStatus === "online" ? "active" : "learning",
+        affiliate_ai: "learning", // Will be active when affiliate APIs are added
+        quantum_core: paystackStatus === "online" ? "active" : "initializing",
+      },
+    }
+
+    return NextResponse.json(systemStatus)
   } catch (error) {
-    console.error("Comprehensive AI status error:", error)
-    return NextResponse.json({ error: "Failed to fetch AI status" }, { status: 500 })
-  }
-}
-
-async function checkNeuralStatus(): Promise<string> {
-  const hasPaystack = !!process.env.PAYSTACK_SECRET_KEY
-  const hasShopify = !!process.env.SHOPIFY_ACCESS_TOKEN
-  const hasStripe = !!process.env.STRIPE_SECRET_KEY
-
-  if (hasPaystack || hasShopify || hasStripe) {
-    return "active"
-  }
-  return "offline"
-}
-
-async function checkAffiliateStatus(): Promise<string> {
-  const hasCJ = !!process.env.CJ_API_KEY
-  const hasAmazon = !!process.env.AMAZON_ASSOCIATES_KEY
-  const hasClickBank = !!process.env.CLICKBANK_API_KEY
-
-  if (hasCJ || hasAmazon || hasClickBank) {
-    return "active"
-  }
-  return "learning"
-}
-
-async function checkQuantumStatus(): Promise<string> {
-  const totalIntegrations = [
-    process.env.PAYSTACK_SECRET_KEY,
-    process.env.SHOPIFY_ACCESS_TOKEN,
-    process.env.CJ_API_KEY,
-    process.env.STRIPE_SECRET_KEY,
-  ].filter(Boolean).length
-
-  if (totalIntegrations >= 2) return "active"
-  if (totalIntegrations >= 1) return "learning"
-  return "offline"
-}
-
-async function checkIntegrations(): Promise<{ [key: string]: boolean }> {
-  return {
-    paystack: !!process.env.PAYSTACK_SECRET_KEY,
-    shopify: !!process.env.SHOPIFY_ACCESS_TOKEN,
-    stripe: !!process.env.STRIPE_SECRET_KEY,
-    cj: !!process.env.CJ_API_KEY,
-    amazon: !!process.env.AMAZON_ASSOCIATES_KEY,
-    clickbank: !!process.env.CLICKBANK_API_KEY,
-    analytics: !!process.env.GOOGLE_ANALYTICS_KEY,
+    console.error("AI Comprehensive Status API error:", error)
+    return NextResponse.json(
+      {
+        overall: "error",
+        mode: "error",
+        error: "Failed to check comprehensive system status",
+        timestamp: new Date().toISOString(),
+      },
+      { status: 500 },
+    )
   }
 }
