@@ -1,18 +1,43 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Brain, Globe, TrendingUp, Settings } from "lucide-react"
 
 export function NeuralCommercePanel() {
   const [metrics, setMetrics] = useState({
-    globalAnalysis: "Processing 2.3M data points",
-    automationLevel: 87,
-    marketTrends: [
-      { region: "North America", growth: 12.5, status: "bullish" },
-      { region: "Europe", growth: 8.3, status: "stable" },
-      { region: "Asia Pacific", growth: 15.7, status: "bullish" },
-    ],
+    globalAnalysis: "Loading...",
+    automationLevel: 0,
+    marketTrends: [],
   })
+
+  useEffect(() => {
+    let active = true
+    const fetchMetrics = async () => {
+      try {
+        const res = await fetch("/api/neural/metrics")
+        const data = await res.json()
+        if (active) setMetrics(data)
+      } catch (e) {
+        // fallback in case of error
+        if (active)
+          setMetrics({
+            globalAnalysis: "Processing 2.3M data points",
+            automationLevel: 87,
+            marketTrends: [
+              { region: "North America", growth: 12.5, status: "bullish" },
+              { region: "Europe", growth: 8.3, status: "stable" },
+              { region: "Asia Pacific", growth: 15.7, status: "bullish" },
+            ],
+          })
+      }
+    }
+    fetchMetrics()
+    const interval = setInterval(fetchMetrics, 7000) // Poll every 7 seconds
+    return () => {
+      active = false
+      clearInterval(interval)
+    }
+  }, [])
 
   return (
     <div className="neural-card p-6">
@@ -49,7 +74,7 @@ export function NeuralCommercePanel() {
           Regional Market Trends
         </h3>
         <div className="space-y-3">
-          {metrics.marketTrends.map((trend, index) => (
+          {metrics.marketTrends.map((trend: any, index: number) => (
             <div key={index} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
               <span className="text-white/80">{trend.region}</span>
               <div className="flex items-center space-x-2">
@@ -60,7 +85,9 @@ export function NeuralCommercePanel() {
                 </span>
                 <span
                   className={`px-2 py-1 rounded-full text-xs ${
-                    trend.status === "bullish" ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"
+                    trend.status === "bullish"
+                      ? "bg-green-500/20 text-green-400"
+                      : "bg-yellow-500/20 text-yellow-400"
                   }`}
                 >
                   {trend.status}
@@ -73,7 +100,12 @@ export function NeuralCommercePanel() {
 
       {/* Action Buttons */}
       <div className="mt-6 flex space-x-3">
-        <button className="quantum-button flex-1">Optimize Strategies</button>
+        <button
+          className="quantum-button flex-1"
+          onClick={() => window.dispatchEvent(new CustomEvent("optimize-strategies", { detail: { panel: "neural" } }))}
+        >
+          Optimize Strategies
+        </button>
         <button className="quantum-button flex-1">View Analytics</button>
       </div>
     </div>
