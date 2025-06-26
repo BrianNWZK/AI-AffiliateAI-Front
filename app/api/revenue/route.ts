@@ -1,95 +1,113 @@
-import { NextResponse } from "next/server"
+import { NextResponse } from "next/server";
+
+// Helper: Dynamically find affiliate API keys
+function getAffiliateApiKeys(): Record<string, string> {
+  const env = process.env as Record<string, string>;
+  const keys: Record<string, string> = {};
+  Object.entries(env).forEach(([k, v]) => {
+    if (
+      (k.endsWith("_API_KEY") || k.includes("AFFILIATE") || k.includes("JVZOO") || k.includes("CLICKBANK") || k.includes("DIGISTORE") || k.includes("CJ") || k.includes("SHAREASALE") || k.includes("AMAZON"))
+      && v && v.length > 0
+    ) {
+      keys[k] = v;
+    }
+  });
+  return keys;
+}
 
 export async function GET() {
   try {
-    console.log("🔍 Revenue API called")
+    const paystackKey = process.env.PAYSTACK_SECRET_KEY;
+    const affiliateKeys = getAffiliateApiKeys();
 
-    let paystackRevenue = 0
-    let affiliateRevenue = 0
+    let paystackRevenue = 0;
+    let affiliateRevenue = 0;
+    let affiliateSource = "none";
+    let affiliateDemo = false;
+    let affiliateTransactions: any[] = [];
 
-    // Only try Paystack if configured
-    if (process.env.PAYSTACK_SECRET_KEY) {
+    // Fetch Paystack Revenue if configured
+    if (paystackKey) {
       try {
-        console.log("💰 Fetching Paystack data...")
-        const paystackResponse = await fetch(`https://api.paystack.co/transaction`, {
-          headers: {
-            Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-            "Content-Type": "application/json",
-          },
-        })
+        const resp = await fetch("https://api.paystack.co/transaction", {
+          headers: { Authorization: `Bearer ${paystackKey}` },
+        });
+        const data = await resp.json();
+        paystackRevenue = data.data?.reduce(
+          (sum: number, tx: any) => sum + (tx.status === "success" ? tx.amount / 100 : 0),
+          0,
+        );
+      } catch (e) {
+        console.warn("Paystack revenue fetch failed:", e);
+      }
+    }
 
-        if (paystackResponse.ok) {
-          const paystackData = await paystackResponse.json()
-          paystackRevenue =
-            paystackData.data?.reduce((total: number, transaction: any) => {
-              return transaction.status === "success" ? total + transaction.amount / 100 : total
-            }, 0) || 0
-          console.log(`✅ Paystack revenue: ₦${paystackRevenue}`)
-        } else {
-          console.warn("⚠️ Paystack API error:", paystackResponse.status)
+    // Try all affiliate keys (use first valid)
+    for (const [source, key] of Object.entries(affiliateKeys)) {
+      try {
+        // Example: JVZoo, ClickBank, Digistore24, etc. (pseudo-code: replace with real fetch logic for each API)
+        if (source.includes("JVZOO")) {
+          // Replace the below with the real JVZoo API call
+          // const resp = await fetch("https://api.jvzoo.com/transactions", { headers: { Authorization: key } });
+          // const data = await resp.json();
+          // affiliateRevenue = ...;
+          // affiliateTransactions = ...;
+          affiliateSource = "JVZoo";
+          // For now, just mark as detected
+          affiliateRevenue += 0;
+        } else if (source.includes("CLICKBANK")) {
+          affiliateSource = "ClickBank";
+          affiliateRevenue += 0;
+        } else if (source.includes("AFFILIATE")) {
+          affiliateSource = "Affiliate";
+          affiliateRevenue += 0;
+        } else if (source.includes("CJ")) {
+          affiliateSource = "Commission Junction";
+          affiliateRevenue += 0;
+        } else if (source.includes("DIGISTORE")) {
+          affiliateSource = "Digistore24";
+          affiliateRevenue += 0;
+        } else if (source.includes("SHAREASALE")) {
+          affiliateSource = "ShareASale";
+          affiliateRevenue += 0;
+        } else if (source.includes("AMAZON")) {
+          affiliateSource = "Amazon Associates";
+          affiliateRevenue += 0;
         }
-      } catch (error) {
-        console.error("❌ Paystack fetch error:", error)
+        // If you want to run all, do not break here
+        break;
+      } catch (err) {
+        console.warn(`${source} affiliate fetch failed:`, err);
+        continue;
       }
-    } else {
-      console.log("🔧 Paystack not configured, using demo data")
-      paystackRevenue = 45000 // Demo data
     }
 
-    // Skip affiliate API calls during build (they're fake endpoints anyway)
-    if (process.env.NODE_ENV === "production" && !process.env.AFFILIATE_API_KEY) {
-      console.log("🔧 Affiliate APIs not configured, using demo data")
-      affiliateRevenue = 25000 // Demo data
-    } else if (process.env.AFFILIATE_API_KEY) {
-      // Only try real affiliate APIs if properly configured
-      try {
-        console.log("🤝 Fetching affiliate data...")
-        // Add real affiliate API calls here when you have real endpoints
-        affiliateRevenue = 25000 // Placeholder
-      } catch (error) {
-        console.error("❌ Affiliate fetch error:", error)
-        affiliateRevenue = 25000 // Fallback
-      }
-    } else {
-      affiliateRevenue = 25000 // Demo data
+    // Fallback to demo only if nothing configured
+    if (!paystackKey && Object.keys(affiliateKeys).length === 0) {
+      affiliateDemo = true;
+      affiliateRevenue = 25000;
+      affiliateSource = "demo";
     }
 
-    const totalRevenue = paystackRevenue + affiliateRevenue
-    const growth = totalRevenue > 0 ? 12.5 : 0
-
-    const revenueData = {
-      total: totalRevenue,
-      neural: paystackRevenue,
-      affiliate: affiliateRevenue,
-      growth: growth,
-      breakdown: {
-        paystack: paystackRevenue,
-        affiliate: affiliateRevenue,
-        total: totalRevenue,
-      },
-      lastUpdated: new Date().toISOString(),
-      mode: process.env.PAYSTACK_SECRET_KEY ? "production" : "demo",
-    }
-
-    console.log("📊 Revenue data:", revenueData)
-    return NextResponse.json(revenueData)
-  } catch (error) {
-    console.error("❌ Revenue API error:", error)
-
-    // Return demo data even on error
     return NextResponse.json({
-      total: 125000,
-      neural: 45000,
-      affiliate: 25000,
-      growth: 12.5,
-      breakdown: {
-        paystack: 45000,
-        affiliate: 25000,
-        total: 70000,
-      },
+      total: paystackRevenue + affiliateRevenue,
+      paystack: paystackRevenue,
+      affiliate: affiliateRevenue,
+      affiliateSource,
+      affiliateDemo,
+      affiliateTransactions,
       lastUpdated: new Date().toISOString(),
-      mode: "demo",
-      error: "Using fallback data",
-    })
+      mode: paystackKey || Object.keys(affiliateKeys).length > 0 ? "production" : "demo",
+      integrations: {
+        paystack: !!paystackKey,
+        affiliate: Object.keys(affiliateKeys).length > 0,
+      },
+    });
+  } catch (error) {
+    console.error("Revenue API error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch revenue", mode: "demo" },
+      { status: 500 },
+    );
   }
 }
