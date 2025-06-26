@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Target, Users, Link, TrendingUp, Play, Pause } from "lucide-react"
 
 export function AffiliateMarketingPanel() {
@@ -17,6 +18,23 @@ export function AffiliateMarketingPanel() {
     ],
   })
 
+  const [showCampaignModal, setShowCampaignModal] = useState(false)
+  const router = useRouter()
+
+  const handleCreateCampaign = () => setShowCampaignModal(true)
+  const handleViewReports = () => router.push("/reports")
+
+  // Optional: stub handlers for other buttons (future use)
+  const handleOptimizeStrategies = () => {
+    alert("Optimize Strategies coming soon!")
+  }
+  const handleViewAnalytics = () => {
+    router.push("/analytics")
+  }
+  const handleViewActivities = () => {
+    router.push("/activities")
+  }
+
   return (
     <div className="neural-card p-6">
       <div className="flex items-center justify-between mb-6">
@@ -29,6 +47,7 @@ export function AffiliateMarketingPanel() {
           className={`p-2 rounded-lg transition-colors ${
             isAutomationActive ? "bg-green-500/20 text-green-400" : "bg-white/10 text-white/70"
           }`}
+          aria-label={isAutomationActive ? "Pause Automation" : "Resume Automation"}
         >
           {isAutomationActive ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
         </button>
@@ -88,10 +107,39 @@ export function AffiliateMarketingPanel() {
       </div>
 
       {/* Action Buttons */}
-      <div className="mt-6 flex space-x-3">
-        <button className="quantum-button flex-1">Create Campaign</button>
-        <button className="quantum-button flex-1">View Reports</button>
+      <div className="mt-6 flex flex-wrap gap-3">
+        <button className="quantum-button flex-1" onClick={handleCreateCampaign}>
+          Create Campaign
+        </button>
+        <button className="quantum-button flex-1" onClick={handleViewReports}>
+          View Reports
+        </button>
+        <button className="quantum-button flex-1" onClick={handleOptimizeStrategies}>
+          Optimize Strategies
+        </button>
+        <button className="quantum-button flex-1" onClick={handleViewAnalytics}>
+          View Analytics
+        </button>
+        <button className="quantum-button flex-1" onClick={handleViewActivities}>
+          View Activities
+        </button>
       </div>
+
+      {/* Simple Modal Example */}
+      {showCampaignModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50">
+          <div className="bg-gray-900 p-8 rounded-lg max-w-md w-full">
+            <h3 className="text-lg font-bold text-white mb-4">Create New Campaign</h3>
+            <p className="text-white/80 mb-4">[Campaign creation form goes here]</p>
+            <button
+              className="quantum-button mt-2 w-full"
+              onClick={() => setShowCampaignModal(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
