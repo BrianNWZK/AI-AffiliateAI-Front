@@ -1,5 +1,15 @@
 import { NextResponse } from "next/server"
 
+// Helper to find all affiliate API keys
+function getAffiliateApiKeys() {
+  const env = process.env as Record<string, string>;
+  return Object.entries(env).filter(
+    ([k, v]) =>
+      (k.endsWith("_API_KEY") || k.includes("AFFILIATE") || k.includes("JVZOO") || k.includes("CLICKBANK") || k.includes("CJ") || k.includes("SHAREASALE") || k.includes("AMAZON"))
+      && v && v.length > 0
+  );
+}
+
 export async function GET() {
   try {
     console.log("🔍 Activities API called")
@@ -41,7 +51,24 @@ export async function GET() {
         console.error("❌ Failed to fetch Paystack activities:", error)
       }
     } else {
-      console.log("🔧 Paystack not configured, using demo activities")
+      console.log("🔧 Paystack not configured, checking affiliate keys...")
+    }
+
+    // Dynamically check for affiliate API keys
+    const affiliateKeys = getAffiliateApiKeys();
+    let affiliateActivityAdded = false;
+    for (const [key, value] of affiliateKeys) {
+      // TODO: Add specific logic for each affiliate network here
+      // For now, just add a stub activity
+      activities.push({
+        id: `affiliate-${key}-${Date.now()}`,
+        type: "affiliate",
+        message: `Affiliate integration (${key}) detected and ready.`,
+        timestamp: new Date(),
+        icon: "Users",
+        color: "text-blue-400",
+      });
+      affiliateActivityAdded = true;
     }
 
     // Add system activities
@@ -96,7 +123,8 @@ export async function GET() {
       activities: sortedActivities,
       lastUpdated: new Date().toISOString(),
       status: "success",
-      mode: process.env.PAYSTACK_SECRET_KEY ? "production" : "demo",
+      mode: (process.env.PAYSTACK_SECRET_KEY || affiliateKeys.length > 0) ? "production" : "demo",
+      affiliateKeys: affiliateKeys.map(([k]) => k),
     })
   } catch (error) {
     console.error("❌ Activities API error:", error)
