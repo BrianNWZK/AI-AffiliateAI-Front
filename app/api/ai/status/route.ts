@@ -1,6 +1,23 @@
 import { NextResponse } from "next/server"
 import { validateEnv, getPaystackConfig } from "@/lib/env-config"
 
+// Scan for all affiliate-related keys
+function getAffiliateApiKeys() {
+  const env = process.env as Record<string, string>
+  return Object.keys(env).filter(
+    k =>
+      (k.endsWith("_API_KEY") ||
+        k.includes("AFFILIATE") ||
+        k.includes("JVZOO") ||
+        k.includes("CLICKBANK") ||
+        k.includes("CJ") ||
+        k.includes("SHAREASALE") ||
+        k.includes("AMAZON")) &&
+      env[k] &&
+      env[k].length > 0
+  )
+}
+
 export async function GET() {
   try {
     const envStatus = validateEnv()
@@ -28,13 +45,12 @@ export async function GET() {
         quantum: "error",
         timestamp: new Date().toISOString(),
       },
-      { status: 500 },
+      { status: 500 }
     )
   }
 }
 
 async function checkNeuralCommerceStatus(paystackConfig: any): Promise<string> {
-  // Check if Paystack integration is working
   if (!paystackConfig.isConfigured) {
     return "offline"
   }
@@ -54,19 +70,17 @@ async function checkNeuralCommerceStatus(paystackConfig: any): Promise<string> {
 }
 
 async function checkAffiliateStatus(): Promise<string> {
-  // Check affiliate integrations
-  if (!process.env.AFFILIATE_API_KEY) {
+  const affiliateKeys = getAffiliateApiKeys()
+  if (affiliateKeys.length === 0) {
     return "offline"
   }
-
-  // For now, return learning until you configure affiliate APIs
+  // If you want to show "active" when you have a real integration, update this logic
   return "learning"
 }
 
 async function checkQuantumCoreStatus(paystackConfig: any): Promise<string> {
-  // Check if all core systems are operational
   const hasPaystack = paystackConfig.isConfigured
-  const hasAffiliate = !!process.env.AFFILIATE_API_KEY
+  const hasAffiliate = getAffiliateApiKeys().length > 0
 
   if (hasPaystack) {
     return "active"
