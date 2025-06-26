@@ -1,21 +1,29 @@
 import { NextResponse } from "next/server"
 import { validateEnv } from "@/lib/env-config"
 
+// Dynamically detect affiliate API keys
+function getAffiliateApiKeys() {
+  const env = process.env as Record<string, string>;
+  return Object.keys(env).filter(
+    k =>
+      (k.endsWith("_API_KEY") || k.includes("AFFILIATE") || k.includes("JVZOO") || k.includes("CLICKBANK") || k.includes("CJ") || k.includes("SHAREASALE") || k.includes("AMAZON"))
+      && env[k] && env[k].length > 0
+  );
+}
+
 export async function GET() {
   console.log("=== SYSTEM HEALTH CHECK ===")
 
   try {
-    // Get environment status (this won't throw errors now)
     const envStatus = validateEnv()
+    const affiliateKeys = getAffiliateApiKeys();
 
-    // Initialize service status
     let paystackTest = {
       status: "not_configured",
       message: "Demo mode - Add PAYSTACK_SECRET_KEY and PAYSTACK_PUBLIC_KEY for real data",
       transactionCount: 0,
     }
 
-    // Only test Paystack if configured AND not during build
     const isBuildTime = process.env.NODE_ENV === "production" && !process.env.VERCEL_ENV
 
     if (envStatus.hasPaystack && !isBuildTime) {
@@ -60,35 +68,36 @@ export async function GET() {
       }
     }
 
-    // Test other services safely (skip during build)
-    let supabaseStatus = "not_configured"
-    let sendgridStatus = "not_configured"
+    // Supabase health check (skip isReady, just confirm env vars)
+    let supabaseStatus = envStatus.hasDatabase ? "configured" : "not_configured";
 
-    if (!isBuildTime) {
-      if (envStatus.hasDatabase) {
-        try {
-          const { SupabaseIntegration } = await import("@/lib/supabase-integration")
-          const supabase = new SupabaseIntegration()
-          supabaseStatus = supabase.isReady() ? "ready" : "error"
-        } catch (error) {
-          console.warn("⚠️ Supabase test skipped:", error)
-          supabaseStatus = "error"
+    // SendGrid health check: try sending a test (if TEST_EMAIL set), otherwise just check API key
+    let sendgridStatus = "not_configured";
+    let sendgridTestMessage = "";
+    if (!isBuildTime && envStatus.hasEmail) {
+      if (process.env.SENDGRID_API_KEY) {
+        sendgridStatus = "configured";
+        if (process.env.TEST_EMAIL) {
+          try {
+            const sgMail = (await import("@sendgrid/mail")).default;
+            sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
+            await sgMail.send({
+              to: process.env.TEST_EMAIL,
+              from: process.env.TEST_EMAIL,
+              subject: "SendGrid Health Check",
+              text: "SendGrid is working.",
+            });
+            sendgridStatus = "ok";
+            sendgridTestMessage = "Test email sent successfully";
+          } catch (err: any) {
+            sendgridStatus = "error";
+            sendgridTestMessage = "Failed to send test email: " + (err.message || String(err));
+          }
         }
+      } else {
+        sendgridStatus = "not_configured";
+        sendgridTestMessage = "SENDGRID_API_KEY not set";
       }
-
-      if (envStatus.hasEmail) {
-        try {
-          const { SendGridIntegration } = await import("@/lib/sendgrid-integration")
-          const sendgrid = new SendGridIntegration()
-          sendgridStatus = sendgrid.isReady() ? "ready" : "error"
-        } catch (error) {
-          console.warn("⚠️ SendGrid test skipped:", error)
-          sendgridStatus = "error"
-        }
-      }
-    } else {
-      supabaseStatus = envStatus.hasDatabase ? "configured" : "not_configured"
-      sendgridStatus = envStatus.hasEmail ? "configured" : "not_configured"
     }
 
     const healthReport = {
@@ -97,6 +106,7 @@ export async function GET() {
       buildTime: isBuildTime,
       environment: {
         ...envStatus,
+        affiliateKeysDetected: affiliateKeys,
         nodeEnv: process.env.NODE_ENV || "development",
         vercelEnv: process.env.VERCEL_ENV || "development",
       },
@@ -124,11 +134,16 @@ export async function GET() {
           configured: envStatus.hasEmail,
           status: sendgridStatus,
           keyPresent: !!process.env.SENDGRID_API_KEY,
+          testMessage: sendgridTestMessage,
         },
         auth: {
           configured: envStatus.hasAuth,
           status: envStatus.hasAuth ? "ready" : "using_fallback",
           keyPresent: !!process.env.JWT_SECRET_KEY,
+        },
+        affiliate: {
+          configured: affiliateKeys.length > 0,
+          keys: affiliateKeys,
         },
       },
       recommendations: [
@@ -152,8 +167,6 @@ export async function GET() {
     return NextResponse.json(healthReport)
   } catch (error) {
     console.error("❌ Health check failed:", error)
-
-    // Even if health check fails, return a graceful response
     return NextResponse.json(
       {
         timestamp: new Date().toISOString(),
@@ -170,13 +183,14 @@ export async function GET() {
           supabase: { configured: false, status: "error" },
           sendgrid: { configured: false, status: "error" },
           auth: { configured: false, status: "error" },
+          affiliate: { configured: false, status: "error" },
         },
         recommendations: [
           "🔧 Check server logs for detailed error information",
           "🚀 Add PAYSTACK_SECRET_KEY and PAYSTACK_PUBLIC_KEY to enable payments",
         ],
       },
-      { status: 200 }, // Return 200 even on error so dashboard can display the info
+      { status: 200 },
     )
   }
 }
