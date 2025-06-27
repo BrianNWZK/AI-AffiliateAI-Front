@@ -1,45 +1,30 @@
 import { NextResponse } from "next/server"
-import { PaystackIntegration } from "@/lib/paystack-config"
+
+const BACKEND_URL = "https://ai-affiliate-backend.onrender.com/paystack/revenue"
 
 export async function GET() {
   try {
-    const paystack = new PaystackIntegration()
+    const resp = await fetch(BACKEND_URL)
+    if (!resp.ok) {
+      throw new Error(`Backend error: ${resp.status}`)
+    }
+    const backendData = await resp.json()
 
-    // Get real Paystack data
-    const [currentMonthRevenue, totalRevenue, recentTransactions] = await Promise.all([
-      paystack.getMonthlyRevenue(),
-      paystack.getTotalRevenue(),
-      paystack.getRecentActivities(5),
-    ])
-
-    // Get previous month for growth calculation
-    const lastMonth = new Date()
-    lastMonth.setMonth(lastMonth.getMonth() - 1)
-    const previousMonthRevenue = await paystack.getMonthlyRevenue(lastMonth.getMonth(), lastMonth.getFullYear())
-
-    // Calculate growth
-    const growth =
-      previousMonthRevenue > 0
-        ? ((currentMonthRevenue - previousMonthRevenue) / previousMonthRevenue) * 100
-        : currentMonthRevenue > 0
-          ? 100
-          : 0
-
+    // Map backend response to the expected frontend format
     const responseData = {
-      total: Math.round(totalRevenue * 100) / 100,
-      neural: Math.round(currentMonthRevenue * 100) / 100,
+      total: backendData.amount ?? 0,
+      neural: backendData.amount ?? 0,
       affiliate: 0,
-      growth: Math.round(growth * 100) / 100,
+      growth: 0, // Can't calculate without historical data
       breakdown: {
-        paystack: Math.round(currentMonthRevenue * 100) / 100,
-        monthly: Math.round(currentMonthRevenue * 100) / 100,
-        total: Math.round(totalRevenue * 100) / 100,
+        paystack: backendData.amount ?? 0,
+        monthly: backendData.amount ?? 0,
+        total: backendData.amount ?? 0,
       },
-      recentTransactions: recentTransactions.slice(0, 3),
-      lastUpdated: new Date().toISOString(),
+      recentTransactions: [],
+      lastUpdated: backendData.timestamp ?? new Date().toISOString(),
     }
 
-    console.log("Real Paystack Revenue:", responseData)
     return NextResponse.json(responseData)
   } catch (error) {
     console.error("Revenue API error:", error)
