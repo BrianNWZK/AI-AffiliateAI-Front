@@ -6,6 +6,8 @@ import { NeuralCommercePanel } from "@/components/neural-commerce-panel"
 import { AffiliateMarketingPanel } from "@/components/affiliate-marketing-panel"
 import { ActivityFeed } from "@/components/activity-feed"
 import { AIStatusIndicator } from "@/components/ai-status-indicator"
+import { ArielAIPanel } from "@/components/ariel-ai-panel"
+import { QuantumCorePanel } from "@/components/quantum-core-panel"
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true)
@@ -206,6 +208,16 @@ export default function Dashboard() {
           {/* AI Status Indicator */}
           <div className="lg:col-span-3">
             <AIStatusIndicator status={aiStatus} />
+          </div>
+
+          {/* Ariel AI Panel */}
+          <div className="lg:col-span-2">
+            <ArielAIPanel />
+          </div>
+
+          {/* Quantum Core Panel */}
+          <div className="lg:col-span-1">
+            <QuantumCorePanel />
           </div>
 
           {/* Revenue Metrics */}
