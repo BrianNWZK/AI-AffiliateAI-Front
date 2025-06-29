@@ -1,25 +1,21 @@
 import { NextResponse } from "next/server"
+const BACKEND_URL = "https://ai-affiliate-backend.onrender.com/quantum/optimize"
 
-// Simulate optimization powered by Quantum Core AI
 export async function POST(request: Request) {
-  // Optionally, accept { panel: "neural" | "affiliate" | ... } in JSON body
-  // const { panel } = await request.json();
-
-  // Simulate computation delay
-  await new Promise((res) => setTimeout(res, 1500))
-
-  // Simulate recommendations
-  const recommendations = [
-    "Increase automation level to improve conversions.",
-    "Target bullish markets for higher revenue.",
-    "Adjust campaign budgets based on real-time AI trends.",
-    "Diversify affiliate partnerships to reduce volatility.",
-  ]
-
-  return NextResponse.json({
-    status: "success",
-    recommendations,
-    quantumInsights: "Quantum Core AI analyzed live data and generated these tailored strategies.",
-    timestamp: new Date().toISOString(),
-  })
+  try {
+    // Forward the request body to the backend if needed
+    const body = await request.text()
+    const resp = await fetch(BACKEND_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: body,
+    })
+    const data = await resp.json()
+    return NextResponse.json(data)
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to optimize Quantum", details: error?.toString() },
+      { status: 500 }
+    )
+  }
 }
