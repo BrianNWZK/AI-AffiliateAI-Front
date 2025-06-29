@@ -3,22 +3,31 @@
 import { useEffect, useState } from "react"
 import { Brain, Globe, TrendingUp, Settings } from "lucide-react"
 
+// This panel now polls backend for live metrics/status and supports "Optimize Strategies" action.
 export function NeuralCommercePanel() {
   const [metrics, setMetrics] = useState({
     globalAnalysis: "Loading...",
     automationLevel: 0,
     marketTrends: [],
   })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [optimizing, setOptimizing] = useState(false)
+  const [optimizeMsg, setOptimizeMsg] = useState<string | null>(null)
 
+  // Poll backend for neural metrics
   useEffect(() => {
     let active = true
     const fetchMetrics = async () => {
+      setLoading(true)
+      setError(null)
       try {
         const res = await fetch("/api/neural/metrics")
+        if (!res.ok) throw new Error("Neural metrics API error")
         const data = await res.json()
         if (active) setMetrics(data)
-      } catch (e) {
-        // fallback in case of error
+      } catch (e: any) {
+        setError("Failed to fetch Neural Commerce metrics. Showing demo data.")
         if (active)
           setMetrics({
             globalAnalysis: "Processing 2.3M data points",
@@ -29,15 +38,35 @@ export function NeuralCommercePanel() {
               { region: "Asia Pacific", growth: 15.7, status: "bullish" },
             ],
           })
+      } finally {
+        setLoading(false)
       }
     }
     fetchMetrics()
-    const interval = setInterval(fetchMetrics, 7000) // Poll every 7 seconds
+    const interval = setInterval(fetchMetrics, 15000)
     return () => {
       active = false
       clearInterval(interval)
     }
   }, [])
+
+  // Optimize Strategies action button
+  const handleOptimize = async () => {
+    setOptimizing(true)
+    setOptimizeMsg(null)
+    try {
+      // Call backend endpoint for optimization (replace with your backend endpoint if different)
+      const res = await fetch("/api/neural/optimize", { method: "POST" })
+      if (!res.ok) throw new Error("Failed to optimize strategies")
+      const data = await res.json()
+      setOptimizeMsg(data.message || "Optimization triggered successfully!")
+    } catch (e: any) {
+      setOptimizeMsg("Failed to trigger optimization. Please try again.")
+    } finally {
+      setOptimizing(false)
+      setTimeout(() => setOptimizeMsg(null), 7000)
+    }
+  }
 
   return (
     <div className="neural-card p-6">
@@ -46,10 +75,15 @@ export function NeuralCommercePanel() {
           <Brain className="h-6 w-6 text-blue-500" />
           <h2 className="text-xl font-semibold text-white">Neural Commerce Ecosystem</h2>
         </div>
-        <button className="p-2 text-white/70 hover:text-white transition-colors">
+        <button className="p-2 text-white/70 hover:text-white transition-colors" aria-label="Settings" title="Settings (coming soon)">
           <Settings className="h-5 w-5" />
         </button>
       </div>
+
+      {/* Error */}
+      {error && <div className="text-red-400 mb-3">{error}</div>}
+      {/* Optimize Feedback */}
+      {optimizeMsg && <div className="text-blue-400 mb-3">{optimizeMsg}</div>}
 
       {/* Global Analysis Status */}
       <div className="mb-6">
@@ -102,11 +136,14 @@ export function NeuralCommercePanel() {
       <div className="mt-6 flex space-x-3">
         <button
           className="quantum-button flex-1"
-          onClick={() => window.dispatchEvent(new CustomEvent("optimize-strategies", { detail: { panel: "neural" } }))}
+          onClick={handleOptimize}
+          disabled={optimizing}
         >
-          Optimize Strategies
+          {optimizing ? "Optimizing..." : "Optimize Strategies"}
         </button>
-        <button className="quantum-button flex-1">View Analytics</button>
+        <button className="quantum-button flex-1" onClick={() => window.location.href="/analytics"}>
+          View Analytics
+        </button>
       </div>
     </div>
   )
