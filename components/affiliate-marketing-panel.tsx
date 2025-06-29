@@ -30,6 +30,7 @@ export function AffiliateMarketingPanel() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showCampaignModal, setShowCampaignModal] = useState(false)
+  const [actionMsg, setActionMsg] = useState<string | null>(null)
   const router = useRouter()
 
   // Poll affiliate metrics every 15 seconds
@@ -39,20 +40,19 @@ export function AffiliateMarketingPanel() {
       setLoading(true)
       setError(null)
       try {
-        // You must implement this endpoint in your backend!
         const res = await fetch("/api/affiliate/metrics")
-        if (!res.ok) throw new Error("API returned error")
+        if (!res.ok) throw new Error("Affiliate metrics API error")
         const data = await res.json()
         if (active) {
           setMetrics(data)
-          setLoading(false)
         }
       } catch (e) {
         if (active) {
           setError("Failed to load live metrics. Showing demo data.")
           setMetrics(DEMO_METRICS)
-          setLoading(false)
         }
+      } finally {
+        setLoading(false)
       }
     }
     fetchMetrics()
@@ -61,14 +61,42 @@ export function AffiliateMarketingPanel() {
       active = false
       clearInterval(interval)
     }
-    // eslint-disable-next-line
   }, [])
 
-  const handleCreateCampaign = () => setShowCampaignModal(true)
+  // Create Campaign action button
+  const handleCreateCampaign = async () => {
+    setShowCampaignModal(true)
+    setActionMsg(null)
+  }
+
+  // Simulated backend action for Optimize Strategies
+  const handleOptimizeStrategies = async () => {
+    setActionMsg("Optimizing strategies...")
+    try {
+      const res = await fetch("/api/affiliate/optimize", { method: "POST" })
+      if (!res.ok) throw new Error("Failed to optimize strategies")
+      const data = await res.json()
+      setActionMsg(data.message || "Optimization triggered successfully!")
+    } catch {
+      setActionMsg("Failed to trigger optimization. Please try again.")
+    } finally {
+      setTimeout(() => setActionMsg(null), 7000)
+    }
+  }
+
   const handleViewReports = () => router.push("/reports")
-  const handleOptimizeStrategies = () => alert("Optimize Strategies coming soon!")
   const handleViewAnalytics = () => router.push("/analytics")
   const handleViewActivities = () => router.push("/activities")
+
+  const toggleAutomation = async () => {
+    setIsAutomationActive((prev) => !prev)
+    setActionMsg(
+      isAutomationActive ? "Affiliate automation paused." : "Affiliate automation resumed."
+    )
+    setTimeout(() => setActionMsg(null), 5000)
+    // Optionally, call backend to persist automation state
+    // await fetch("/api/affiliate/automation", { method: "POST", body: JSON.stringify({ active: !isAutomationActive }) })
+  }
 
   return (
     <div className="neural-card p-6">
@@ -78,7 +106,7 @@ export function AffiliateMarketingPanel() {
           <h2 className="text-xl font-semibold text-white">Affiliate Marketing AI</h2>
         </div>
         <button
-          onClick={() => setIsAutomationActive(!isAutomationActive)}
+          onClick={toggleAutomation}
           className={`p-2 rounded-lg transition-colors ${
             isAutomationActive ? "bg-green-500/20 text-green-400" : "bg-white/10 text-white/70"
           }`}
@@ -90,6 +118,7 @@ export function AffiliateMarketingPanel() {
 
       {loading && <div className="text-white/80 mb-3">Loading live metrics...</div>}
       {error && <div className="text-red-400 mb-3">{error}</div>}
+      {actionMsg && <div className="text-blue-400 mb-3">{actionMsg}</div>}
 
       {metrics && (
         <>
