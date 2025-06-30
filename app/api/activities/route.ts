@@ -1,3 +1,5 @@
+// PATCH: Remove demo/fallback activities, only return real activities; error if none
+
 import { NextResponse } from "next/server"
 
 // Helper to find all affiliate API keys
@@ -46,7 +48,6 @@ export async function GET() {
 
     // Affiliate activities
     const affiliateKeys = getAffiliateApiKeys();
-    let affiliateActivityAdded = false;
     for (const [key, value] of affiliateKeys) {
       activities.push({
         id: `affiliate-${key}-${Date.now()}`,
@@ -56,7 +57,6 @@ export async function GET() {
         icon: "Users",
         color: "text-blue-400",
       });
-      affiliateActivityAdded = true;
     }
 
     // System activity
@@ -69,35 +69,15 @@ export async function GET() {
       color: "text-blue-500",
     })
 
-    // If no real activities, add demo
+    // PATCH: Only return real activities, never fallback/demo
     if (activities.length <= 1) {
-      const demoActivities = [
-        {
-          id: "demo-revenue-1",
-          type: "revenue",
-          message: "Neural Commerce generated ₦25,000 in revenue",
-          timestamp: new Date(Date.now() - 10 * 60 * 1000),
-          icon: "DollarSign",
-          color: "text-green-400",
-        },
-        {
-          id: "demo-ai-1",
-          type: "ai",
-          message: "AI optimization improved conversion by 8%",
-          timestamp: new Date(Date.now() - 25 * 60 * 1000),
-          icon: "TrendingUp",
-          color: "text-purple-400",
-        },
-        {
-          id: "demo-affiliate-1",
-          type: "affiliate",
-          message: "Affiliate partner generated ₦5,500",
-          timestamp: new Date(Date.now() - 45 * 60 * 1000),
-          icon: "Users",
-          color: "text-blue-400",
-        },
-      ]
-      activities.push(...demoActivities)
+      return NextResponse.json({
+        activities: [],
+        lastUpdated: new Date().toISOString(),
+        status: "error",
+        mode: "production",
+        error: "No real activities available",
+      }, { status: 503 })
     }
 
     return NextResponse.json({
@@ -109,31 +89,13 @@ export async function GET() {
     })
   } catch (error) {
     console.error("Activities API error:", error)
-    // Return demo
-    const fallbackActivities = [
-      {
-        id: "fallback-1",
-        type: "system",
-        message: "System running in demo mode",
-        timestamp: new Date(),
-        icon: "Zap",
-        color: "text-blue-500",
-      },
-      {
-        id: "fallback-2",
-        type: "revenue",
-        message: "Demo: Neural Commerce generated ₦15,000",
-        timestamp: new Date(Date.now() - 30 * 60 * 1000),
-        icon: "DollarSign",
-        color: "text-green-400",
-      },
-    ]
+    // PATCH: Return error, never demo
     return NextResponse.json({
-      activities: fallbackActivities,
+      activities: [],
       lastUpdated: new Date().toISOString(),
       status: "error",
-      mode: "demo",
-      error: "Using fallback data",
-    })
+      mode: "production",
+      error: "Failed to fetch activities",
+    }, { status: 500 })
   }
 }
