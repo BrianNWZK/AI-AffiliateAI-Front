@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useState } from "react"
+import { RevenueMetrics } from "./revenue-metrics"
 
 export default function ArielDashboard() {
   const [aiStatus, setAIStatus] = useState<any>(null)
@@ -83,36 +84,40 @@ export default function ArielDashboard() {
   }
 
   return (
-    <div className="neural-card p-6 rounded-xl bg-gradient-to-br from-[#1A2238] via-[#283655] to-[#1a1f2b] shadow-lg border border-[#394056] mb-8">
-      <h2 className="text-2xl font-bold text-white mb-4">Ariel AI Operations Dashboard</h2>
-      {error && <div className="text-red-400 mb-2">{error}</div>}
-      {success && <div className="text-green-400 mb-2">{success}</div>}
-      <div className="mb-4">
-        <span>Status: </span>
-        <span className={aiStatus?.running ? "text-green-400" : "text-red-400"}>
-          {aiStatus?.running ? "ACTIVE" : "PAUSED"}
-        </span>
-      </div>
-      <div className="flex gap-3 mb-4">
-        <button className="quantum-button bg-yellow-600 text-white px-4 py-2 rounded"
-          onClick={handlePause} disabled={paused || action !== null}>
-          Pause Ariel
-        </button>
-        <button className="quantum-button bg-green-600 text-white px-4 py-2 rounded"
-          onClick={handleResume} disabled={!paused || action !== null}>
-          Resume Ariel
-        </button>
-        <button className="quantum-button bg-red-700 text-white px-4 py-2 rounded"
-          onClick={handleKill} disabled={action !== null}>
-          Kill Switch
-        </button>
-      </div>
-      <div>
-        <h3 className="text-white font-medium mb-2">Recent Ariel Activity</h3>
-        <div className="bg-white/10 rounded p-2 text-xs text-white h-40 overflow-y-scroll whitespace-pre-line">
-          {logs}
+    <div className="space-y-8">
+      <div className="neural-card p-6 rounded-xl bg-gradient-to-br from-[#1A2238] via-[#283655] to-[#1a1f2b] shadow-lg border border-[#394056]">
+        <h2 className="text-2xl font-bold text-white mb-4">Ariel AI Operations Dashboard</h2>
+        {error && <div className="text-red-400 mb-2">{error}</div>}
+        {success && <div className="text-green-400 mb-2">{success}</div>}
+        <div className="mb-4">
+          <span>Status: </span>
+          <span className={aiStatus?.running ? "text-green-400" : "text-red-400"}>
+            {aiStatus?.running ? "ACTIVE" : "PAUSED"}
+          </span>
+        </div>
+        <div className="flex gap-3 mb-4">
+          <button className="quantum-button bg-yellow-600 text-white px-4 py-2 rounded"
+            onClick={handlePause} disabled={paused || action !== null}>
+            Pause Ariel
+          </button>
+          <button className="quantum-button bg-green-600 text-white px-4 py-2 rounded"
+            onClick={handleResume} disabled={!paused || action !== null}>
+            Resume Ariel
+          </button>
+          <button className="quantum-button bg-red-700 text-white px-4 py-2 rounded"
+            onClick={handleKill} disabled={action !== null}>
+            Kill Switch
+          </button>
+        </div>
+        <div>
+          <h3 className="text-white font-medium mb-2">Recent Ariel Activity</h3>
+          <div className="bg-white/10 rounded p-2 text-xs text-white h-40 overflow-y-scroll whitespace-pre-line">
+            {logs}
+          </div>
         </div>
       </div>
+
+      <RevenueMetrics />
     </div>
   )
 }
