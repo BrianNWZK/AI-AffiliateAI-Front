@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-const BACKEND_URL = "https://ai-affiliate-backend.onrender.com/quantum/logs"
+const BACKEND_URL = "https://ai-affiliate-backend.onrender.com/api/v1/quantum/logs"
 
 export async function GET() {
   try {
