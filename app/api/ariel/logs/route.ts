@@ -1,16 +1,11 @@
 import { NextResponse } from "next/server"
-export async function GET() {
-  try {
-    const resp = await fetch(`${process.env.BACKEND_URL}/api/v1/ariel/logs`)
-    if (!resp.ok) {
-      const errorText = await resp.text()
-      console.error(`Backend error: ${resp.status} ${errorText}`)
-      throw new Error(`Backend error: ${resp.status}`)
-    }
-    const data = await resp.json()
-    return NextResponse.json(data)
-  } catch (error) {
-    console.error("Ariel logs API error:", error)
-    return NextResponse.json({ logs: ["No logs available. Please check the backend service and logs for more information."] }, { status: 503 })
-  }
+
+export async function GET(request: Request) {
+  const { search } = new URL(request.url)
+  return await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/proxy/api/v1/ariel/logs${search}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: request.headers.get('Authorization') || '',
+    },
+  })
 }
