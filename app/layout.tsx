@@ -2,8 +2,6 @@ import type React from "react"
 import type { Metadata } from "next"
 import "./globals.css"
 
-import type { Viewport } from "next"
-
 export const metadata: Metadata = {
   title: "AI SaaS Dashboard - Multi-Platform Revenue Tracking",
   description:
@@ -19,11 +17,6 @@ export const metadata: Metadata = {
     generator: 'v0.dev'
 }
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-}
-
 export default function RootLayout({
   children,
 }: {
@@ -32,6 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </head>
       <body className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 antialiased">
