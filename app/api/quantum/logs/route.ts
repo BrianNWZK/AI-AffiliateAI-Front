@@ -4,11 +4,15 @@ const BACKEND_URL = "https://ai-affiliate-backend.onrender.com/api/v1/quantum/lo
 export async function GET() {
   try {
     const resp = await fetch(BACKEND_URL)
-    if (!resp.ok) throw new Error(`Backend error: ${resp.status}`)
+    if (!resp.ok) {
+      const errorText = await resp.text()
+      console.error(`Backend error: ${resp.status} ${errorText}`)
+      throw new Error(`Backend error: ${resp.status}`)
+    }
     const data = await resp.json()
     return NextResponse.json(data)
   } catch (error) {
     console.error("Quantum logs API error:", error)
-    return NextResponse.json({ logs: ["No logs available."] }, { status: 503 })
+    return NextResponse.json({ logs: ["No logs available. Please check the backend service and logs for more information."] }, { status: 503 })
   }
 }

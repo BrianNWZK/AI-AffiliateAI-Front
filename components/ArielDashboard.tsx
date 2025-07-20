@@ -112,7 +112,7 @@ export default function ArielDashboard() {
         <div>
           <h3 className="text-white font-medium mb-2">Recent Ariel Activity</h3>
           <div className="bg-white/10 rounded p-2 text-xs text-white h-40 overflow-y-scroll whitespace-pre-line">
-            {logs}
+          {logs ? logs : "No recent activity."}
           </div>
         </div>
       </div>
