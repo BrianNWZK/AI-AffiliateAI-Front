@@ -11,6 +11,8 @@ export async function GET() {
     })
 
     if (!resp.ok) {
+      const errorText = await resp.text()
+      console.error(`Backend error: ${resp.status} ${errorText}`)
       throw new Error(`Backend error: ${resp.status}`)
     }
 
@@ -42,7 +44,7 @@ export async function GET() {
     console.error("Revenue API error:", error)
     return NextResponse.json(
       {
-        error: "Failed to fetch revenue data. Please check the backend service.",
+        error: "Failed to fetch revenue data. Please check the backend service and logs for more information.",
         total: 0,
         neural: 0,
         affiliate: 0,

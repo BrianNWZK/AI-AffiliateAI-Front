@@ -22,6 +22,7 @@ export function RevenueMetrics({ data: initialData }: RevenueMetricsProps) {
     },
   )
   const [loading, setLoading] = useState(!initialData)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!initialData) {
@@ -31,9 +32,14 @@ export function RevenueMetrics({ data: initialData }: RevenueMetricsProps) {
           if (response.ok) {
             const revenueData = await response.json()
             setData(revenueData)
+            setError(null)
+          } else {
+            const errorData = await response.json()
+            setError(errorData.error || "Failed to fetch revenue data")
           }
         } catch (error) {
           console.error("Failed to fetch revenue data:", error)
+          setError("An unexpected error occurred. Please try again later.")
         } finally {
           setLoading(false)
         }
@@ -80,6 +86,8 @@ export function RevenueMetrics({ data: initialData }: RevenueMetricsProps) {
         <h2 className="text-2xl font-bold text-white">Revenue Overview</h2>
         <div className="text-white/60 text-sm">Last updated: {new Date().toLocaleTimeString()}</div>
       </div>
+
+      {error && <div className="text-red-400 mb-2">{error}</div>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="neural-card p-6">
