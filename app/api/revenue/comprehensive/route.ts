@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server"
 
-const BACKEND_URL = "https://ai-affiliate-backend.onrender.com/api/v1/paystack/revenue/all"
-
 export async function GET() {
   try {
-    const resp = await fetch(BACKEND_URL, {
+    const resp = await fetch(`${process.env.BACKEND_URL}/api/v1/paystack/revenue/all`, {
       headers: {
         "Content-Type": "application/json",
       },
